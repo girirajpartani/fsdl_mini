@@ -41,17 +41,66 @@ exports.getFeed = async (req, res) => {
   }
 };
 
+// GET SINGLE ARTICLE
+exports.getArticleById = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const article = await Article.findById(req.params.id)
+      .populate("author", "username")
+      .populate("community", "name");
+
+    if (!article) {
+      return res.status(404).json({ error: "Article not found" });
+    }
+
+    const isLiked = article.likes.some(
+      (id) => id.toString() === userId.toString()
+    );
+
+    const isBookmarked = article.bookmarks.some(
+      (id) => id.toString() === userId.toString()
+    );
+
+    res.json({
+      ...article.toObject(),
+      isLiked,
+      isBookmarked,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 // GET ARTICLES BY COMMUNITY
 exports.getArticlesByCommunity = async (req, res) => {
   try {
     const { communityId } = req.params;
+    const userId = req.user.id; // 🔥 current user
 
     const articles = await Article.find({ community: communityId })
       .populate("author", "username")
       .populate("community", "name")
       .sort({ createdAt: -1 });
 
-    res.json(articles);
+    // 🔥 Add isLiked + isBookmarked
+    const updatedArticles = articles.map((article) => {
+      const isLiked = article.likes.some(
+        (id) => id.toString() === userId.toString()
+      );
+
+      const isBookmarked = article.bookmarks.some(
+        (id) => id.toString() === userId.toString()
+      );
+
+      return {
+        ...article.toObject(),
+        isLiked,
+        isBookmarked,
+      };
+    });
+
+    res.json(updatedArticles);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -98,6 +147,7 @@ exports.likeArticle = async (req, res) => {
   res.json(article);
 };
 
+
 // BOOKMARK ARTICLE
 exports.bookmarkArticle = async (req, res) => {
   const article = await Article.findById(req.params.id);
@@ -113,6 +163,8 @@ exports.bookmarkArticle = async (req, res) => {
   await article.save();
   res.json(article);
 };
+
+
 
 exports.flagArticle = async (req, res) => {
   const { reason } = req.body;

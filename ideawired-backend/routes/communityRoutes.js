@@ -14,4 +14,5 @@ router.post("/:id/follow", auth, followCommunity);
 router.delete("/:id/follow", auth, unfollowCommunity);
 router.get("/", auth, getCommunities);
 
+
 module.exports = router;

@@ -11,33 +11,38 @@ export default function CommunityPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newArticle, setNewArticle] = useState({ title: "", content: "" });
   const [submitting, setSubmitting] = useState(false);
+
+  
   const router = useRouter();
   const params = useParams();
   const communityId = params.id;
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      router.push("/login");
-      return;
-    }
+    const fetchData = async () => {
+      const token = localStorage.getItem("token");
 
-    // Fetch community details and articles
-    Promise.all([
-      fetchAPI(`/communities/${communityId}`),
-      fetchAPI(`/articles/community/${communityId}`)
-    ])
-      .then(([communityData, articlesData]) => {
+      if (!token) {
+        router.push("/login");
+        return;
+      }
+
+      try {
+        const [communityData, articlesData] = await Promise.all([
+          fetchAPI(`/communities/${communityId}`, "GET", null, token),
+          fetchAPI(`/articles/community/${communityId}`, "GET", null, token)
+        ]);
+
         setCommunity(communityData);
         setArticles(articlesData);
-        console.log(communityData, articlesData);
-        
-        setLoading(false);
-      })
-      .catch((error) => {
+
+      } catch (error) {
         console.error("Error fetching community data:", error);
+      } finally {
         setLoading(false);
-      });
+      }
+    };
+
+    fetchData();
   }, [communityId, router]);
 
   const handleCreateArticle = async (e) => {
@@ -55,7 +60,6 @@ export default function CommunityPage() {
 
       const createdArticle = await fetchAPI("/articles", "POST", articleData, token);
 
-      // Add the new article to the list
       setArticles([createdArticle, ...articles]);
       setNewArticle({ title: "", content: "" });
       setShowCreateForm(false);
@@ -63,18 +67,6 @@ export default function CommunityPage() {
       console.error("Error creating article:", error);
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  const toggleFollow = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetchAPI(`/communities/${communityId}/follow`, "POST", null, token);
-
-      // Update community follow status
-      setCommunity(prev => ({ ...prev, isFollowed: response.isFollowed }));
-    } catch (error) {
-      console.error("Error toggling follow:", error);
     }
   };
 
@@ -122,16 +114,6 @@ export default function CommunityPage() {
                 </p>
               )}
             </div>
-            <button
-              onClick={toggleFollow}
-              className={`font-medium py-2 px-6 rounded-md transition-colors duration-200 ${
-                community.isFollowed
-                  ? "bg-gray-600 hover:bg-gray-700 text-white"
-                  : "bg-blue-600 hover:bg-blue-700 text-white"
-              }`}
-            >
-              {community.isFollowed ? "Unfollow" : "Follow"}
-            </button>
           </div>
 
           <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
@@ -141,7 +123,6 @@ export default function CommunityPage() {
           </div>
         </div>
 
-        {/* Create Article Button */}
         <div className="mb-6">
           <button
             onClick={() => setShowCreateForm(!showCreateForm)}
@@ -151,7 +132,6 @@ export default function CommunityPage() {
           </button>
         </div>
 
-        {/* Create Article Form */}
         {showCreateForm && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-8">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">

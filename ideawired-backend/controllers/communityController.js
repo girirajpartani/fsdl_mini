@@ -20,12 +20,8 @@ exports.createCommunity = async (req, res) => {
 // Get single community
 exports.getCommunity = async (req, res) => {
   try {
-    console.log(req.params.id);
-    
-    const community = await Community.findById(req.params.id);
 
-    console.log(community);
-    
+    const community = await Community.findById(req.params.id);
 
     if (!community) {
       return res.status(404).json({ message: "Community not found" });
@@ -64,7 +60,6 @@ exports.followCommunity = async (req, res) => {
 // Unfollow community
 exports.unfollowCommunity = async (req, res) => {
   try {
-    console.log("Unfollow request received for community:", req.params.id, "by user:", req.user.id);
     const community = await Community.findById(req.params.id);
     
     if (!community) {
@@ -72,25 +67,22 @@ exports.unfollowCommunity = async (req, res) => {
       return res.status(404).json({ message: "Community not found" });
     }
     
-    console.log("Community followers before:", community.followers);
     const userId = req.user.id;
 
     if (community.followers.includes(userId)) {
-      community.followers = community.followers.filter(id => id !== userId);
+      community.followers = community.followers.filter(
+        id => id.toString() !== userId.toString()
+      );
       await community.save();
-      console.log("Successfully unfollowed community. Followers after:", community.followers);
       res.json({ message: "Unfollowed community", isFollowed: false });
     } else {
-      console.log("User is not following this community");
       res.status(400).json({ message: "You are not following this community" });
     }
   } catch (err) {
-    console.error("Error in unfollowCommunity:", err);
     res.status(500).json({ error: err.message });
   }
 };
 
-// Get all communities
 exports.getCommunities = async (req, res) => {
   const userId = req.user ? req.user.id : null;
   const communities = await Community.find();
